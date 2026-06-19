@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Star, ExternalLink, Copy, Download, Code } from 'lucide-react';
+import { useState } from 'react';
 import type { Skill } from '../data/skills';
 
 const categoryTagStyles: Record<string, string> = {
@@ -20,6 +21,30 @@ const categoryLabels: Record<string, string> = {
   media: '多媒体', search: '搜索', finance: '金融', communication: '通讯', browser: '浏览器', other: '其他',
 };
 
+function getAvatarColor(id: string): { bg: string; text: string } {
+  const colors = [
+    { bg: 'bg-blue-100', text: 'text-blue-600' },
+    { bg: 'bg-green-100', text: 'text-green-600' },
+    { bg: 'bg-purple-100', text: 'text-purple-600' },
+    { bg: 'bg-amber-100', text: 'text-amber-600' },
+    { bg: 'bg-pink-100', text: 'text-pink-600' },
+    { bg: 'bg-teal-100', text: 'text-teal-600' },
+    { bg: 'bg-red-100', text: 'text-red-600' },
+    { bg: 'bg-indigo-100', text: 'text-indigo-600' },
+    { bg: 'bg-orange-100', text: 'text-orange-600' },
+    { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getScreenshotUrl(url: string): string {
+  return `https://image.thum.io/get/width/400/crop/600/${encodeURIComponent(url)}`;
+}
+
 function StarRating({ rating }: { rating: number }) {
   const fullStars = Math.floor(rating);
   const hasHalf = rating - fullStars >= 0.5;
@@ -37,6 +62,50 @@ function StarRating({ rating }: { rating: number }) {
 
 interface SkillCardProps { skill: Skill; index: number; onClick: () => void; }
 
+function CardBanner({ skill }: { skill: Skill }) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const avatarColor = getAvatarColor(skill.id);
+  const firstChar = skill.name[0] || '?';
+  const screenshotUrl = getScreenshotUrl(skill.url);
+
+  if (imgError) {
+    return (
+      <div className={`relative h-36 w-full flex items-center justify-center ${avatarColor.bg}`}>
+        <span className={`text-5xl font-black ${avatarColor.text} select-none`}>{firstChar}</span>
+        <div className="absolute top-2.5 left-2.5">
+          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm bg-white/80 backdrop-blur-sm ${categoryTagStyles[skill.category]}`}>
+            {categoryLabels[skill.category]}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-36 w-full overflow-hidden bg-slate-100">
+      {/* Letter avatar as fallback */}
+      <div className={`absolute inset-0 flex items-center justify-center ${avatarColor.bg}`}>
+        <span className={`text-5xl font-black ${avatarColor.text} select-none`}>{firstChar}</span>
+      </div>
+      {/* Screenshot image */}
+      <img
+        src={screenshotUrl}
+        alt={skill.name}
+        loading="lazy"
+        className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setImgLoaded(true)}
+        onError={() => setImgError(true)}
+      />
+      <div className="absolute top-2.5 left-2.5 z-10">
+        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm bg-white/80 backdrop-blur-sm ${categoryTagStyles[skill.category]}`}>
+          {categoryLabels[skill.category]}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function SkillCard({ skill, index, onClick }: SkillCardProps) {
   return (
     <motion.div
@@ -49,14 +118,7 @@ export default function SkillCard({ skill, index, onClick }: SkillCardProps) {
       className="group relative bg-surface border border-border rounded-2xl cursor-pointer overflow-hidden transition-all duration-200 ease-out hover:shadow-lg hover:shadow-black/5 hover:border-border-hover hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent/30"
       role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onClick()}
     >
-      <div className="h-8 relative overflow-hidden" style={{ backgroundColor: skill.bannerColor }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
-        <div className="absolute bottom-1.5 left-3">
-          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${categoryTagStyles[skill.category]}`}>
-            {categoryLabels[skill.category]}
-          </span>
-        </div>
-      </div>
+      <CardBanner skill={skill} />
       <div className="p-4">
         <h3 className="text-base font-bold text-primary mb-1 group-hover:text-accent transition-colors">{skill.name}</h3>
         <p className="text-xs text-muted mb-2 truncate">{skill.url.replace(/^https?:\/\/github.com\//, '')}</p>
